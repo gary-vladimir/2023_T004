@@ -2,7 +2,7 @@ from cyberpi import *
 from time import sleep
 
 def move(left, right):
-    mbot2.drive_power(left, right)
+    mbot2.drive_power(left*-1, right)
 
 def stop():
     mbot2.EM_stop(port="all")
