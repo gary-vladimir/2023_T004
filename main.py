@@ -23,13 +23,13 @@ def ultraDist(i):
     return res
 
 def quadRead(i):
-    quad_rgb_sensor.set_led(color = "b", index = 1)
+    quad_rgb_sensor.set_led(color = "b", index = i)
     s1 = quad_rgb_sensor.get_light("L2", index = i)
     s2 = quad_rgb_sensor.get_light("L1", index = i)
     s3 = quad_rgb_sensor.get_light("R1", index = i)
     s4 = quad_rgb_sensor.get_light("R2", index = i)
     color = ""
-    if(s2 > 75 and s3 > 75): 
+    if(s1 > 75 and s2 > 75 and s3 > 75): 
         color = "white"
     
     s1 = 1 if s1 < 40 else 0
@@ -37,6 +37,51 @@ def quadRead(i):
     s3 = 1 if s3 < 40 else 0
     s4 = 1 if s4 < 40 else 0
     return [s1, s2, s3, s4, color]
+
+def botella():
+    stop()
+    led.on(255,0,0)
+    move(-60,-60)
+    sleep(0.4)
+    stop()
+    move(60,-60)
+    sleep(1.2)
+    stop()
+    end = True
+    while end:
+        s3 = quad_rgb_sensor.get_light("R1", index = 1)
+        if(s3 < 40): break
+        move(50,50)
+        second = 0
+        while second < 0.4:
+            sleep(0.1)
+            second += 0.1
+            s3 = quad_rgb_sensor.get_light("R1", index = 1)
+            if(s3 < 40):
+                end = False
+                break
+        stop()
+        move(0,80)
+        second = 0
+        while second < 0.6:
+            sleep(0.1)
+            second += 0.1
+            s3 = quad_rgb_sensor.get_light("R1", index = 1)
+            if(s3 < 40):
+                end = False
+                break
+        stop()
+    stop()
+    move(60,60)
+    sleep(0.2)
+    stop()
+    while True:
+        s3 = quad_rgb_sensor.get_light("R1", index = 1)
+        if(s3 < 40): break
+        move(60,-60)
+    stop()
+    led.on(50,50,50)
+
 
 @event.is_press("b") # triangle button
 def followLine():
@@ -50,7 +95,8 @@ def followLine():
         [s1, s2, s3, s4, color] = quadRead(1)
         if color == "white": # reflective tape
             break
-
+        if ultraDist(1) <= 8:
+            botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
             continue
