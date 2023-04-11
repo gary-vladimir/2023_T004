@@ -90,8 +90,14 @@ def findLine(left, right, ch):
     stop()
 
 def intersection(direction):
-    # check if it's tilted, if so, it means that it-s not an intersection, but a bump instead.
+    # TODO check if it's tilted, if so, it means that it-s not an intersection, but a bump instead.
     stop()
+    if is_tiltforward():
+        audio.play("beeps")
+        move(50,50)
+        sleep(0.8)
+        stop()
+        return
     sleep(0.3)
     move(-50,-50)
     sleep(0.4)
@@ -134,8 +140,7 @@ def intersection(direction):
         sleep(0.4)
         findLine(50,-50, "l1")
     led.on(50,50,50)
-
-@event.is_press("b") # triangle button
+    
 def followLine():
     KD = 15
     KP = 30
@@ -170,8 +175,28 @@ def followLine():
         else: move((SPEED + P + D)*0.65, (SPEED - P + D)*0.65)
         PreviousError=error
     
+    # TODO change led to blue and read again to make sure its a reflective tape, if not. use recursion to continue
     mbot2.EM_stop()
-    audio.play("beeps")
+    led.on("cyan")
+    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
+    sleep(0.4)
+    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
+    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower)
+    if not (s1 > 85 or s4 > 85):
+        quad_rgb_sensor.set_led(color = "green", index = LineFollower)
+        led.on(50,50,50)
+        move(60,60)
+        sleep(0.3)
+        stop()
+        followLine()
+    else:
+        quad_rgb_sensor.set_led(color = "green", index = LineFollower)
+        led.on("white")
+        audio.play("beeps")    
+
+@event.is_press("b") # triangle button
+def actionB():
+    followLine()
 
 @event.is_press("right")
 def test():
