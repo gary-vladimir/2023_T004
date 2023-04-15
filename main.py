@@ -1,7 +1,7 @@
 from cyberpi import *
 from time import sleep
 
-LineFollower = 1
+LineFollower = 2
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -9,11 +9,42 @@ def move(left, right):
 def stop():
     mbot2.EM_stop(port="all")
 
+def clasificador(angle):
+    mbot2.servo_set(angle, "s1")
+    sleep(0.6)
+
+def compuerta(angle):
+    mbot2.servo_set(angle, "s2")
+    sleep(0.6)
+
+def closeClaw():
+    mbot2.motor_set(-100, "m1")
+    sleep(2.5)
+    mbot2.motor_set(0, "m1")
+    
+def openClaw():
+    mbot2.motor_set(100, "m1")
+    sleep(2.5)
+    mbot2.motor_set(0, "m1")
+        
+def elevateClaw():
+    mbot2.motor_set(-100, "m2")
+    sleep(0.7)
+    mbot2.motor_set(0, "m2")
+
+def lowerClaw():
+    mbot2.motor_set(80, "m2")
+    sleep(0.7)
+    mbot2.motor_set(0, "m2")
+    
+    
 @event.start
 def init():
     ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=1)
     ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=2)
     quad_rgb_sensor.set_led(color = "green", index = LineFollower)
+    clasificador(90)
+    compuerta(90)
     led.on(255,255,255)
     console.print("start up successful")
     led.on(50,50,50)
@@ -199,16 +230,17 @@ def actionB():
     followLine()
 
 @event.is_press("right")
-def test():
-    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
-    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower)
-    debug = "{0} {1}\n".format(s1, s4)
-    console.print(debug)
+def right():
+    openClaw()
 
 @event.is_press("left")
 def left():
-    move(80,80)
-    sleep(1)
-    move(50,-50)
-    sleep(1)
-    stop()
+    closeClaw()
+
+@event.is_press("up")
+def up():
+    elevateClaw()
+
+@event.is_press("down")
+def down():
+    lowerClaw()
