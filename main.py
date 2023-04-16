@@ -17,24 +17,24 @@ def compuerta(angle):
     mbot2.servo_set(angle, "s2")
     sleep(0.6)
 
+def claw(angle):
+    mbot2.servo_set(angle, "s3")
+    sleep(0.8)
+
 def closeClaw():
-    mbot2.motor_set(-100, "m1")
-    sleep(2.5)
-    mbot2.motor_set(0, "m1")
+    claw(140)
     
 def openClaw():
-    mbot2.motor_set(100, "m1")
-    sleep(2.5)
-    mbot2.motor_set(0, "m1")
+    claw(70)
         
 def elevateClaw():
-    mbot2.motor_set(-100, "m2")
-    sleep(0.7)
+    mbot2.motor_set(100, "m2")
+    sleep(1.2)
     mbot2.motor_set(0, "m2")
 
 def lowerClaw():
-    mbot2.motor_set(80, "m2")
-    sleep(0.7)
+    mbot2.motor_set(-100, "m2")
+    sleep(1.2)
     mbot2.motor_set(0, "m2")
     
     
