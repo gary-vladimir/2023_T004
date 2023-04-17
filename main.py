@@ -3,7 +3,7 @@ from time import sleep
 
 LineFollower = 2
 BlackMax = 25
-ReflectiveMinGreen = 50
+ReflectiveMinGreen = 55
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -60,6 +60,12 @@ def quadRead(i):
     s3 = 1 if s3 < BlackMax else 0
     s4 = 1 if s4 < BlackMax else 0
     return [s1, s2, s3, s4, color]
+
+def subida():
+    return get_pitch() <= -20
+
+def bajada():
+    return get_pitch() >= 20
 
 @event.start
 def init():
@@ -124,29 +130,37 @@ def findLine(left, right, ch):
 def intersection(direction):
     # TODO check if it's tilted, if so, it means that it-s not an intersection, but a bump instead.
     stop()
-    if is_tiltforward(): # TODO increase sensitivity
-        audio.play("beeps")
+    if subida(): # TODO increase sensitivity
         move(50,50)
         sleep(0.8)
         stop()
         return
     sleep(0.3)
     #TODO add a retreat until not black very slow move
-    move(-50,-50)
-    sleep(0.4)
+    move(-40,-40)
+    sleep(0.2)
     stop()
+    while True:
+        s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) > BlackMax
+        s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) > BlackMax
+        if direction == "l" and s1:
+            stop()
+            break
+        if direction == "r" and s4:
+            stop()
+            break
+        move(-25,-25)
+        
     quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     sleep(0.5)
-    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower)
-    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
-    s4 = s4 < 50 and s4 > 10
-    s1 = s1 < 50 and s1 > 10
+    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) < 40
+    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) < 40
     sleep(0.3)
     quad_rgb_sensor.set_led(color = "green", index = LineFollower)
     if s1 and s4:
         led.on("green",0)
         move(80,-80)
-        sleep(0.8)
+        sleep(1)
         findLine(60,-60, "r1")
     elif s1:
         led.on("green", id=5)
@@ -162,12 +176,12 @@ def intersection(direction):
         move(0,-80)
         sleep(0.5)
         findLine(50,-50, "l1")
-    elif direction == "left":
+    elif direction == "l":
         led.on("yellow", id=5)
         move(80,80)
         sleep(0.4)
         findLine(-50,50, "r1")
-    elif direction == "right":
+    elif direction == "r":
         led.on("yellow", id=1)
         move(80,80)
         sleep(0.4)
@@ -189,9 +203,9 @@ def followLine():
             break
         # TODO if it's tilted forward, lower the claw all the way, and make the ultrasonic stop
         # TODO if it's tilted back, lower the claw a little
-        if(is_tiltforward()):
+        if subida():
             status = 2
-        elif(is_tiltback()):
+        elif bajada():
             status = 3
         else:
             status = 1
@@ -216,9 +230,9 @@ def followLine():
             elevateClaw()
             
         if(s1 and s2):
-            intersection("left")
+            intersection("l")
         elif(s3 and s4):
-            intersection("right")
+            intersection("r")
         suma = s1 + s2*3 + s3*5 + s4*7
         pesos = s1 + s2 + s3 + s4
         if(pesos > 0):
@@ -229,7 +243,7 @@ def followLine():
         error = POS-4
         P = KP*error
         D = KD * (error-PreviousError)
-        if(is_tiltback()):move((SPEED + P + D)*0.35, (SPEED - P + D)*0.35)
+        if status == 3:move((SPEED + P + D)*0.35, (SPEED - P + D)*0.35)
         else: move((SPEED + P + D)*0.65, (SPEED - P + D)*0.65)
         PreviousError=error
         previousStatus = status
