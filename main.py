@@ -29,14 +29,14 @@ def closeClaw():
 def openClaw():
     claw(70)
         
-def elevateClaw():
+def elevateClaw(time = 1.2):
     mbot2.motor_set(100, "m2")
-    sleep(1.2)
+    sleep(time)
     mbot2.motor_set(0, "m2")
 
-def lowerClaw():
+def lowerClaw(time = 1.2):
     mbot2.motor_set(-100, "m2")
-    sleep(1.2)
+    sleep(time)
     mbot2.motor_set(0, "m2")
 
 
@@ -52,7 +52,7 @@ def quadRead(i):
     s3 = quad_rgb_sensor.get_light("R1", index = i)
     s4 = quad_rgb_sensor.get_light("R2", index = i)
     color = ""
-    if(s1 > ReflectiveMinGreen and s2 > ReflectiveMinGreen and s3 > ReflectiveMinGreen): 
+    if(s1 > ReflectiveMinGreen and s2 > ReflectiveMinGreen and s3 > ReflectiveMinGreen and s4 > ReflectiveMinGreen): 
         color = "white"
 
     s1 = 1 if s1 < BlackMax else 0
@@ -175,6 +175,8 @@ def intersection(direction):
     led.on(50,50,50)
     
 def followLine():
+    previousStatus = 1
+    status = 1 # 1 = plano, 2 = subida, 3 = bajada
     KD = 15
     KP = 30
     SPEED = 80
@@ -185,11 +187,34 @@ def followLine():
         [s1, s2, s3, s4, color] = quadRead(LineFollower)
         if color == "white": # reflective tape
             break
-        if ultraDist(1) <= 8:
+        # TODO if it's tilted forward, lower the claw all the way, and make the ultrasonic stop
+        # TODO if it's tilted back, lower the claw a little
+        if(is_tiltforward()):
+            status = 2
+        elif(is_tiltback()):
+            status = 3
+        else:
+            status = 1
+        
+        if ultraDist(1) <= 8 and status == 1:
             botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
             continue
+        
+        if(status == 2 and previousStatus == 1):
+            stop()
+            lowerClaw(0.6)
+        elif(status == 3 and previousStatus == 1):
+            stop()
+            lowerClaw()
+        elif(status == 1 and previousStatus == 2):
+            stop()
+            elevateClaw(0.6)
+        elif(status == 1 and previousStatus == 3):
+            stop()
+            elevateClaw()
+            
         if(s1 and s2):
             intersection("left")
         elif(s3 and s4):
@@ -207,6 +232,7 @@ def followLine():
         if(is_tiltback()):move((SPEED + P + D)*0.35, (SPEED - P + D)*0.35)
         else: move((SPEED + P + D)*0.65, (SPEED - P + D)*0.65)
         PreviousError=error
+        previousStatus = status
     
     # TODO change led to blue and read again to make sure its a reflective tape, if not. use recursion to continue
     mbot2.EM_stop()
