@@ -2,6 +2,8 @@ from cyberpi import *
 from time import sleep
 
 LineFollower = 2
+BlackMax = 25
+ReflectiveMinGreen = 50
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -36,18 +38,6 @@ def lowerClaw():
     mbot2.motor_set(-100, "m2")
     sleep(1.2)
     mbot2.motor_set(0, "m2")
-    
-    
-@event.start
-def init():
-    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=1)
-    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=2)
-    quad_rgb_sensor.set_led(color = "green", index = LineFollower)
-    clasificador(90)
-    compuerta(90)
-    led.on(255,255,255)
-    console.print("start up successful")
-    led.on(50,50,50)
 
 
 def ultraDist(i):
@@ -62,14 +52,25 @@ def quadRead(i):
     s3 = quad_rgb_sensor.get_light("R1", index = i)
     s4 = quad_rgb_sensor.get_light("R2", index = i)
     color = ""
-    if(s1 > 50 and s2 > 50 and s3 > 50): 
+    if(s1 > ReflectiveMinGreen and s2 > ReflectiveMinGreen and s3 > ReflectiveMinGreen): 
         color = "white"
 
-    s1 = 1 if s1 < 25 else 0
-    s2 = 1 if s2 < 25 else 0
-    s3 = 1 if s3 < 25 else 0
-    s4 = 1 if s4 < 25 else 0
+    s1 = 1 if s1 < BlackMax else 0
+    s2 = 1 if s2 < BlackMax else 0
+    s3 = 1 if s3 < BlackMax else 0
+    s4 = 1 if s4 < BlackMax else 0
     return [s1, s2, s3, s4, color]
+
+@event.start
+def init():
+    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=1)
+    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=2)
+    quad_rgb_sensor.set_led(color = "green", index = LineFollower)
+    clasificador(90)
+    compuerta(90)
+    led.on(255,255,255)
+    console.print("start up successful")
+    led.on(50,50,50)
 
 def botella():
     stop()
@@ -83,14 +84,14 @@ def botella():
     end = True
     while end:
         s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
-        if(s3 < 25): break
+        if(s3 < BlackMax): break
         move(50,50)
         second = 0
         while second < 0.4:
             sleep(0.1)
             second += 0.1
             s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
-            if(s3 < 25):
+            if(s3 < BlackMax):
                 end = False
                 break
         stop()
@@ -100,7 +101,7 @@ def botella():
             sleep(0.1)
             second += 0.1
             s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
-            if(s3 < 25):
+            if(s3 < BlackMax):
                 end = False
                 break
         stop()
@@ -110,26 +111,27 @@ def botella():
     stop()
     while True:
         s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
-        if(s3 < 25): break
+        if(s3 < BlackMax): break
         move(60,-60)
     stop()
     led.on(50,50,50)
 
 def findLine(left, right, ch):
-    while quad_rgb_sensor.get_light(ch, index = LineFollower) > 25:
+    while quad_rgb_sensor.get_light(ch, index = LineFollower) > BlackMax:
         move(left, right)
     stop()
 
 def intersection(direction):
     # TODO check if it's tilted, if so, it means that it-s not an intersection, but a bump instead.
     stop()
-    if is_tiltforward():
+    if is_tiltforward(): # TODO increase sensitivity
         audio.play("beeps")
         move(50,50)
         sleep(0.8)
         stop()
         return
     sleep(0.3)
+    #TODO add a retreat until not black very slow move
     move(-50,-50)
     sleep(0.4)
     stop()
@@ -152,14 +154,14 @@ def intersection(direction):
         sleep(0.8)
         move(-80,0)
         sleep(0.5)
-        findLine(-50,50, "l1")
+        findLine(-50,50, "r1")
     elif s4:
         led.on("green", id=1)
         move(80,80)
         sleep(0.8)
         move(0,-80)
         sleep(0.5)
-        findLine(50,-50, "r1")
+        findLine(50,-50, "l1")
     elif direction == "left":
         led.on("yellow", id=5)
         move(80,80)
@@ -224,6 +226,22 @@ def followLine():
         quad_rgb_sensor.set_led(color = "green", index = LineFollower)
         led.on("white")
         audio.play("beeps")    
+
+@event.is_press("a")
+def actionA():
+    s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
+    s2 = quad_rgb_sensor.get_light("L1", index=LineFollower)
+    s3 = quad_rgb_sensor.get_light("R1", index=LineFollower)
+    s4 = quad_rgb_sensor.get_light("R2", index=LineFollower)
+    sleep(0.4)
+    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
+    sleep(0.4)
+    s11 = quad_rgb_sensor.get_light("L2", index=LineFollower)
+    s12 = quad_rgb_sensor.get_light("L1", index=LineFollower)
+    s13 = quad_rgb_sensor.get_light("R1", index=LineFollower)
+    s14 = quad_rgb_sensor.get_light("R2", index=LineFollower)
+    string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}".format(s1,s2,s3,s4,s11,s12,s13,s14)
+    console.print(string)
 
 @event.is_press("b") # triangle button
 def actionB():
