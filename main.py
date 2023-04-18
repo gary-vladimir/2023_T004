@@ -3,8 +3,8 @@ from time import sleep
 
 LineFollower = 2
 BlackMax = 25
-ReflectiveMinGreen = 55
-orientation = "horizontal"
+ReflectiveMinGreen = 50
+orientation = "h"
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -30,14 +30,14 @@ def closeClaw():
 def openClaw():
     claw(70)
         
-def elevateClaw(time = 1.4):
+def elevateClaw(time = 1.6):
     mbot2.motor_set(100, "m2")
     mbot2.motor_set(-100, "m1")
     sleep(time)
     mbot2.motor_set(0, "m2")
     mbot2.motor_set(0, "m1")
 
-def lowerClaw(time = 1.25):
+def lowerClaw(time = 1.3):
     mbot2.motor_set(-100, "m2")
     mbot2.motor_set(100, "m1")
     sleep(time)
@@ -258,20 +258,25 @@ def followLine():
     led.on("cyan")
     quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     sleep(0.4)
-    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
-    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower)
-    if not (s1 > 85 or s4 > 85):
+    move(30,30)
+    continueFollowing = False
+    while True:
+        s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
+        s2 = quad_rgb_sensor.get_light("L1", index = LineFollower)
+        s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
+        s4 = quad_rgb_sensor.get_light("R2", index = LineFollower)
+        if(s1 < BlackMax or s2 < BlackMax or s3 < BlackMax or s4 < BlackMax):
+            continueFollowing = True
+            break
+        if(s2 > 90 and s3 > 90):
+            break
+    stop()
+    if continueFollowing:
         quad_rgb_sensor.set_led(color = "green", index = LineFollower)
-        led.on(50,50,50)
-        move(60,60)
-        sleep(0.3)
-        stop()
+        sleep(0.4)
         followLine()
-    else:
-        quad_rgb_sensor.set_led(color = "green", index = LineFollower)
-        led.on("white")
-        audio.play("beeps")    
-
+    audio.play("beeps")
+    
 def grabBall():
     stop()
     closeClaw()
@@ -284,6 +289,7 @@ def grabBall():
     openClaw()
     if quad_rgb_sensor.is_color(color = "black", ch="l1", index=1): clasificador(120)
     else: clasificador(60)
+    clasificador(90)
 
 def moveSearchUltras(time, left, right):
     move(left, right)
@@ -296,11 +302,53 @@ def moveSearchUltras(time, left, right):
         sleep(0.1)
     stop()
     
+def turn(angle):
+    reset_yaw()
+    if(angle > 0):move(50,-50)
+    else: move(-50,50)
+    while True:
+        z = get_yaw()
+        z *= -1
+        if(angle >= 0 and z >= angle):break
+        if(angle < 0 and z <= angle):break
+    stop()
+    if angle > 0: move(-60,60)
+    else: move(60,-60)
+    sleep(0.1)
+    stop()
+        
+def findEdge():
+    move(60, 60)
+    while True:
+        if ultraDist(1) <= 15 and ultraDist(2) <= 15:
+            break
+        if quad_rgb_sensor.get_light("L1", index=LineFollower) < BlackMax:
+            stop()
+            move(-60,-60)
+            sleep(2)
+            break
+        if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
+            grabBall()
+            move(60,60)
+    stop()
+    
 def collectBalls():
     lowerClaw()
     openClaw()
-    moveSearchUltras(3, 60, 60)
-
+    if orientation == "h":
+        moveSearchUltras(3, 60, 60)
+    else:
+        moveSearchUltras(5.5, 60, 60)
+    turn(90)
+    findEdge()
+    move(-60,-60)
+    if orientation == "h":
+        sleep(5.5)
+    else:
+        sleep(3)
+    stop()
+    # at this point the robot is in the center
+    
 @event.is_press("a")
 def actionA():
     s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
@@ -319,7 +367,9 @@ def actionA():
 
 @event.is_press("middle")
 def actionCenter():
-    orientation = "vertical"
+    global orientation
+    orientation = "v"
+    audio.play("beeps")
 
 @event.is_press("b") # triangle button
 def actionB():
