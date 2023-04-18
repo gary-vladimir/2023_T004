@@ -4,6 +4,7 @@ from time import sleep
 LineFollower = 2
 BlackMax = 25
 ReflectiveMinGreen = 55
+orientation = "horizontal"
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -29,15 +30,19 @@ def closeClaw():
 def openClaw():
     claw(70)
         
-def elevateClaw(time = 1.2):
+def elevateClaw(time = 1.4):
     mbot2.motor_set(100, "m2")
+    mbot2.motor_set(-100, "m1")
     sleep(time)
     mbot2.motor_set(0, "m2")
+    mbot2.motor_set(0, "m1")
 
-def lowerClaw(time = 1.2):
+def lowerClaw(time = 1.25):
     mbot2.motor_set(-100, "m2")
+    mbot2.motor_set(100, "m1")
     sleep(time)
     mbot2.motor_set(0, "m2")
+    mbot2.motor_set(0, "m1")
 
 
 def ultraDist(i):
@@ -267,6 +272,35 @@ def followLine():
         led.on("white")
         audio.play("beeps")    
 
+def grabBall():
+    stop()
+    closeClaw()
+    elevateClaw()
+    lowerClaw(0.3)
+    openClaw()
+    lowerClaw(0.3)
+    closeClaw()
+    lowerClaw(0.7)
+    openClaw()
+    if quad_rgb_sensor.is_color(color = "black", ch="l1", index=1): clasificador(120)
+    else: clasificador(60)
+
+def moveSearchUltras(time, left, right):
+    move(left, right)
+    second = 0
+    while second < time:
+        if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
+            grabBall()
+            move(left, right)
+        second += 0.1
+        sleep(0.1)
+    stop()
+    
+def collectBalls():
+    lowerClaw()
+    openClaw()
+    moveSearchUltras(3, 60, 60)
+
 @event.is_press("a")
 def actionA():
     s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
@@ -283,9 +317,14 @@ def actionA():
     string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}".format(s1,s2,s3,s4,s11,s12,s13,s14)
     console.print(string)
 
+@event.is_press("middle")
+def actionCenter():
+    orientation = "vertical"
+
 @event.is_press("b") # triangle button
 def actionB():
     followLine()
+    collectBalls()
 
 @event.is_press("right")
 def right():
