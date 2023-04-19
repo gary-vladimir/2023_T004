@@ -291,7 +291,7 @@ def grabBall():
     else: clasificador(60)
     clasificador(90)
 
-def moveSearchUltras(time, left, right):
+def moveSearchUltras(time, left=60, right=60):
     move(left, right)
     second = 0
     while second < time:
@@ -339,7 +339,7 @@ def redTriangle():
     return (dual_rgb_sensor.get_red(ch = 1, index = 1) - dual_rgb_sensor.get_green(ch = 1, index = 1)) > 50
 
 def checkCorner():
-    moveSearchUltras(2,60,60)
+    moveSearchUltras(2)
     turn(-90)
     turn(-90)
     move(-60,-60)
@@ -351,6 +351,9 @@ def checkCorner():
         move(-60,-60)
         sleep(0.8)
         stop()
+        move(65,55)
+        sleep(0.3)
+        stop()
         compuerta(0)
         sleep(2)
     elif redTriangle():
@@ -359,10 +362,13 @@ def checkCorner():
         move(-60,-60)
         sleep(0.8)
         stop()
+        move(65,55)
+        sleep(0.3)
+        stop()
         compuerta(180)
         sleep(2)
     compuerta(90)
-    moveSearchUltras(3.8,60,60)
+    moveSearchUltras(3.8)
 
 distancesVertical = [3,4,3,2,3,4,3]
 
@@ -370,9 +376,9 @@ def collectBalls():
     lowerClaw()
     openClaw()
     if orientation == "h":
-        moveSearchUltras(3, 60, 60)
+        moveSearchUltras(3)
     else:
-        moveSearchUltras(6, 60, 60)
+        moveSearchUltras(6)
     turn(95)
     findEdge()
     move(-60,-60)
@@ -385,7 +391,7 @@ def collectBalls():
     # at this point the robot is in the center
     turn(-45)
     for dist in distancesVertical:
-        moveSearchUltras(dist, 60,60)
+        moveSearchUltras(dist)
         move(-60,-60)
         sleep(dist)
         stop()
@@ -393,13 +399,13 @@ def collectBalls():
 
 def depositBalls():
     turn(-90)
-    moveSearchUltras(1.5, 60, 60)
+    moveSearchUltras(1.5)
     turn(45)
     checkCorner()
     turn(100)
     checkCorner()
     turn(45)
-    moveSearchUltras(2, 60, 60)
+    moveSearchUltras(2)
     turn(45)
     checkCorner()
     turn(100)
