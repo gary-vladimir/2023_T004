@@ -316,7 +316,7 @@ def turn(angle):
     else: move(60,-60)
     sleep(0.1)
     stop()
-        
+
 def findEdge():
     move(60, 60)
     while True:
@@ -332,6 +332,33 @@ def findEdge():
             move(60,60)
     stop()
     
+def greenTriangle():
+    return dual_rgb_sensor.is_color(color = "green", ch=2, index = 1) or dual_rgb_sensor.is_color(color = "green", ch=1, index = 1)
+
+def redTriangle():
+    return dual_rgb_sensor.is_color(color = "red", ch=2, index = 1) or dual_rgb_sensor.is_color(color = "red", ch=1, index = 1)
+
+def checkCorner():
+    turn(-90)
+    turn(-90)
+    move(-60,-60)
+    sleep(2)
+    stop()
+    if greenTriangle():
+        audio.play("beeps")
+        led.on("green")
+        compuerta(0)
+        sleep(2)
+    elif redTriangle():
+        audio.play("beeps")
+        led.on("red")
+        compuerta(180)
+        sleep(2)
+    compuerta(90)
+    moveSearchUltras(4,60,60)
+
+distancesVertical = [3,4,3,2,3,4,3]
+
 def collectBalls():
     lowerClaw()
     openClaw()
@@ -348,6 +375,27 @@ def collectBalls():
         sleep(3)
     stop()
     # at this point the robot is in the center
+    turn(-45)
+    for dist in distancesVertical:
+        moveSearchUltras(dist, 60,60)
+        move(-60,-60)
+        sleep(dist)
+        stop()
+        turn(-45)
+    sleep(1)
+    # at this point the balls are collected
+    turn(-90)
+    moveSearchUltras(1.5, 60, 60)
+    turn(45)
+    checkCorner()
+    turn(90)
+    checkCorner()
+    turn(45)
+    moveSearchUltras(3, 60, 60)
+    turn(45)
+    checkCorner()
+    turn(90)
+    checkCorner()
     
 @event.is_press("a")
 def actionA():
