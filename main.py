@@ -312,8 +312,8 @@ def turn(angle):
         if(angle >= 0 and z >= angle):break
         if(angle < 0 and z <= angle):break
     stop()
-    if angle > 0: move(-60,60)
-    else: move(60,-60)
+    if angle > 0: move(-50,50)
+    else: move(50,-50)
     sleep(0.1)
     stop()
 
@@ -333,29 +333,36 @@ def findEdge():
     stop()
     
 def greenTriangle():
-    return dual_rgb_sensor.is_color(color = "green", ch=2, index = 1) or dual_rgb_sensor.is_color(color = "green", ch=1, index = 1)
+    return dual_rgb_sensor.get_green(ch = 1, index = 1) > 25 and dual_rgb_sensor.get_red(ch = 1, index = 1) < 20
 
 def redTriangle():
-    return dual_rgb_sensor.is_color(color = "red", ch=2, index = 1) or dual_rgb_sensor.is_color(color = "red", ch=1, index = 1)
+    return (dual_rgb_sensor.get_red(ch = 1, index = 1) - dual_rgb_sensor.get_green(ch = 1, index = 1)) > 50
 
 def checkCorner():
+    moveSearchUltras(2,60,60)
     turn(-90)
     turn(-90)
     move(-60,-60)
-    sleep(2)
+    sleep(1.3)
     stop()
     if greenTriangle():
         audio.play("beeps")
         led.on("green")
+        move(-60,-60)
+        sleep(0.8)
+        stop()
         compuerta(0)
         sleep(2)
     elif redTriangle():
         audio.play("beeps")
         led.on("red")
+        move(-60,-60)
+        sleep(0.8)
+        stop()
         compuerta(180)
         sleep(2)
     compuerta(90)
-    moveSearchUltras(4,60,60)
+    moveSearchUltras(3.8,60,60)
 
 distancesVertical = [3,4,3,2,3,4,3]
 
@@ -365,15 +372,16 @@ def collectBalls():
     if orientation == "h":
         moveSearchUltras(3, 60, 60)
     else:
-        moveSearchUltras(5.5, 60, 60)
-    turn(90)
+        moveSearchUltras(6, 60, 60)
+    turn(95)
     findEdge()
     move(-60,-60)
     if orientation == "h":
         sleep(5.5)
     else:
-        sleep(3)
+        sleep(2.5)
     stop()
+    sleep(5)
     # at this point the robot is in the center
     turn(-45)
     for dist in distancesVertical:
@@ -382,23 +390,25 @@ def collectBalls():
         sleep(dist)
         stop()
         turn(-45)
-    sleep(1)
-    # at this point the balls are collected
+
+def depositBalls():
     turn(-90)
     moveSearchUltras(1.5, 60, 60)
     turn(45)
     checkCorner()
-    turn(90)
+    turn(100)
     checkCorner()
     turn(45)
-    moveSearchUltras(3, 60, 60)
+    moveSearchUltras(2, 60, 60)
     turn(45)
     checkCorner()
-    turn(90)
+    turn(100)
     checkCorner()
-    
+
 @event.is_press("a")
 def actionA():
+    depositBalls()
+    """
     s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
     s2 = quad_rgb_sensor.get_light("L1", index=LineFollower)
     s3 = quad_rgb_sensor.get_light("R1", index=LineFollower)
@@ -412,17 +422,23 @@ def actionA():
     s14 = quad_rgb_sensor.get_light("R2", index=LineFollower)
     string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}".format(s1,s2,s3,s4,s11,s12,s13,s14)
     console.print(string)
+    """
 
 @event.is_press("middle")
 def actionCenter():
     global orientation
     orientation = "v"
     audio.play("beeps")
-
+    g = dual_rgb_sensor.get_green(ch = 1, index = 1)
+    r = dual_rgb_sensor.get_red(ch = 1, index = 1)
+    debugColorSensor = "\ng:{}\nr:{}".format(g, r)
+    console.print(debugColorSensor)
+    
 @event.is_press("b") # triangle button
 def actionB():
     followLine()
     collectBalls()
+    depositBalls()
 
 @event.is_press("right")
 def right():
