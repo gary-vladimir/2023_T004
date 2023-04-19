@@ -291,16 +291,19 @@ def grabBall():
     else: clasificador(60)
     clasificador(90)
 
-def moveSearchUltras(time, left=60, right=60):
+def moveSearchUltras(time, left=60, right=60, considerObstacle=False):
     move(left, right)
     second = 0
     while second < time:
+        if considerObstacle and ultraDist(1) <= 15 and ultraDist(2) <= 18:
+            return second
         if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
             grabBall()
             move(left, right)
         second += 0.1
         sleep(0.1)
     stop()
+    return -1
     
 def turn(angle):
     reset_yaw()
@@ -345,30 +348,26 @@ def checkCorner():
     move(-60,-60)
     sleep(1.3)
     stop()
-    if greenTriangle():
+    green = greenTriangle()
+    red = redTriangle()
+    if green or red:
         audio.play("beeps")
-        led.on("green")
+        if green: led.on("green")
+        else: led.on("red")
         move(-60,-60)
         sleep(0.8)
         stop()
         move(65,55)
-        sleep(0.3)
+        sleep(0.35)
         stop()
-        compuerta(0)
-        sleep(2)
-    elif redTriangle():
-        audio.play("beeps")
-        led.on("red")
-        move(-60,-60)
-        sleep(0.8)
+        if green: compuerta(0)
+        else: compuerta(180)
+        sleep(1)
+        compuerta(90)
+        move(-50,-50)
+        sleep(0.7)
         stop()
-        move(65,55)
-        sleep(0.3)
-        stop()
-        compuerta(180)
-        sleep(2)
-    compuerta(90)
-    moveSearchUltras(3.8)
+    moveSearchUltras(3.7)
 
 distancesVertical = [3,4,3,2,3,4,3]
 
@@ -391,9 +390,10 @@ def collectBalls():
     # at this point the robot is in the center
     turn(-45)
     for dist in distancesVertical:
-        moveSearchUltras(dist)
+        time = moveSearchUltras(dist, considerObstacle=True)
         move(-60,-60)
-        sleep(dist)
+        if time == -1: sleep(dist)
+        else: sleep(time)
         stop()
         turn(-45)
 
