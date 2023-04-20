@@ -5,6 +5,7 @@ LineFollower = 2
 BlackMax = 25
 ReflectiveMinGreen = 50
 orientation = "h"
+clawUp = 1
 
 def move(left, right):
     mbot2.drive_power(left*-1, right)
@@ -67,10 +68,10 @@ def quadRead(i):
     return [s1, s2, s3, s4, color]
 
 def subida():
-    return get_pitch() <= -20
+    return get_pitch() <= -15
 
 def bajada():
-    return get_pitch() >= 20
+    return get_pitch() >= 15
 
 @event.start
 def init():
@@ -192,10 +193,32 @@ def intersection(direction):
         sleep(0.4)
         findLine(50,-50, "l1")
     led.on(50,50,50)
-    
+
+def handleRamps(status):
+    global clawUp
+    if status == 2 and clawUp == 1:
+        lowerClaw(0.6)
+        clawUp = 2
+    elif status == 3 and clawUp == 1:
+        lowerClaw()
+        clawUp = 3
+    elif status == 1 and clawUp == 2:
+        elevateClaw(0.7)
+        clawUp = 1
+    elif status == 1 and clawUp == 3:
+        elevateClaw()
+        clawUp = 1
+
+def getStatus():
+    if subida():
+        status = 2
+    elif bajada():
+        status = 3
+    else:
+        status = 1
+    return status
+
 def followLine():
-    previousStatus = 1
-    status = 1 # 1 = plano, 2 = subida, 3 = bajada
     KD = 15
     KP = 30
     SPEED = 80
@@ -206,34 +229,13 @@ def followLine():
         [s1, s2, s3, s4, color] = quadRead(LineFollower)
         if color == "white": # reflective tape
             break
-        # TODO if it's tilted forward, lower the claw all the way, and make the ultrasonic stop
-        # TODO if it's tilted back, lower the claw a little
-        if subida():
-            status = 2
-        elif bajada():
-            status = 3
-        else:
-            status = 1
-        
-        if ultraDist(1) <= 8 and status == 1:
+        status = getStatus()
+        if ultraDist(1) <= 8 and clawUp == 1:
             botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
             continue
-        
-        if(status == 2 and previousStatus == 1):
-            stop()
-            lowerClaw(0.6)
-        elif(status == 3 and previousStatus == 1):
-            stop()
-            lowerClaw()
-        elif(status == 1 and previousStatus == 2):
-            stop()
-            elevateClaw(0.6)
-        elif(status == 1 and previousStatus == 3):
-            stop()
-            elevateClaw()
-            
+        handleRamps(status)
         if(s1 and s2):
             intersection("l")
         elif(s3 and s4):
@@ -251,16 +253,19 @@ def followLine():
         if status == 3:move((SPEED + P + D)*0.35, (SPEED - P + D)*0.35)
         else: move((SPEED + P + D)*0.65, (SPEED - P + D)*0.65)
         PreviousError=error
-        previousStatus = status
     
     # TODO change led to blue and read again to make sure its a reflective tape, if not. use recursion to continue
     mbot2.EM_stop()
     led.on("cyan")
     quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     sleep(0.4)
+    move(-60,-60)
+    sleep(0.2)
     move(30,30)
     continueFollowing = False
     while True:
+        status = getStatus()
+        handleRamps(status)
         s1 = quad_rgb_sensor.get_light("L2", index = LineFollower)
         s2 = quad_rgb_sensor.get_light("L1", index = LineFollower)
         s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
@@ -270,6 +275,7 @@ def followLine():
             break
         if(s2 > 90 and s3 > 90):
             break
+        
     stop()
     if continueFollowing:
         quad_rgb_sensor.set_led(color = "green", index = LineFollower)
