@@ -381,20 +381,24 @@ def collectBalls():
     lowerClaw()
     openClaw()
     if orientation == "h":
-        moveSearchUltras(3)
+        moveSearchUltras(4.5)
     else:
         moveSearchUltras(6)
     turn(95)
     findEdge()
     move(-60,-60)
     if orientation == "h":
-        sleep(5.5)
+        sleep(4)
     else:
         sleep(2.5)
     stop()
     sleep(5)
-    # at this point the robot is in the center
-    turn(-45)
+    # at this point the robot is in the center and pointing to the long side
+    if orientation == "h":
+        turn(45)
+    else:
+        turn(-45)
+        
     for dist in distancesVertical:
         time = moveSearchUltras(dist, considerObstacle=True)
         move(-60,-60)
