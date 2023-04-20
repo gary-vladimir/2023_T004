@@ -4,6 +4,7 @@ from time import sleep
 LineFollower = 2
 BlackMax = 25
 ReflectiveMinGreen = 50
+ReflectiveMinBlue = 90
 orientation = "h"
 clawUp = 1
 
@@ -273,7 +274,7 @@ def followLine():
         if(s1 < BlackMax or s2 < BlackMax or s3 < BlackMax or s4 < BlackMax):
             continueFollowing = True
             break
-        if(s2 > 90 and s3 > 90):
+        if(s2 > ReflectiveMinBlue and s3 > ReflectiveMinBlue):
             break
         
     stop()
@@ -329,7 +330,7 @@ def turn(angle):
 def findEdge():
     move(60, 60)
     while True:
-        if ultraDist(1) <= 15 and ultraDist(2) <= 15:
+        if ultraDist(1) <= 15 and ultraDist(2) <= 17:
             break
         if quad_rgb_sensor.get_light("L1", index=LineFollower) < BlackMax:
             stop()
@@ -363,7 +364,7 @@ def checkCorner():
         move(-60,-60)
         sleep(0.8)
         stop()
-        move(65,55)
+        move(55,55)
         sleep(0.35)
         stop()
         if green: compuerta(0)
@@ -373,11 +374,15 @@ def checkCorner():
         move(-50,-50)
         sleep(0.7)
         stop()
+        move(50,0)
+        sleep(0.1)
+        stop()
     moveSearchUltras(3.7)
 
 distancesVertical = [3,4,3,2,3,4,3]
 
 def collectBalls():
+    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     lowerClaw()
     openClaw()
     if orientation == "h":
@@ -420,10 +425,42 @@ def depositBalls():
     checkCorner()
     turn(100)
     checkCorner()
-
+    turn(45)
+    move(60,60)
+    sleep(1.5)
+    stop()
+    
+def moveSearchExit():
+    move(60, 60)
+    second = 0
+    while True:
+        if quad_rgb_sensor.get_light("L2", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("L1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("R1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("R2", index=LineFollower) < BlackMax:
+            stop()
+            return True
+        if (ultraDist(1) <= 15 and ultraDist(2) <= 17) or quad_rgb_sensor.get_light("L1", index=LineFollower) > ReflectiveMinBlue:
+            stop()
+            move(-60,-60)
+            sleep(second)
+            stop()
+            return False
+        second += 0.18
+        
+def tryToExit():
+    closeClaw()
+    elevateClaw()
+    global clawUp
+    clawUp = 1
+    for i in range(4):
+        found = moveSearchExit()
+        if found: break
+        turn(90)
+    audio.play("beeps")
+    followLine()
+    
 @event.is_press("a")
 def actionA():
-    depositBalls()
+    #depositBalls()
+    tryToExit()
     """
     s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
     s2 = quad_rgb_sensor.get_light("L1", index=LineFollower)
@@ -454,7 +491,11 @@ def actionCenter():
 def actionB():
     followLine()
     collectBalls()
+    sleep(5)
     depositBalls()
+    sleep(2)
+    tryToExit()
+
 
 @event.is_press("right")
 def right():
