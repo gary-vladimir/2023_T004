@@ -2,9 +2,10 @@ from cyberpi import *
 from time import sleep
 
 LineFollower = 2
-BlackMax = 25
-ReflectiveMinGreen = 50
-ReflectiveMinBlue = 90
+BlackMax = 20 # this should be less than the min green value
+ReflectiveMinGreen = 50 # mid white value for green fill light
+ReflectiveMinBlue = 90 # min reflective value
+GreenMax = 55
 orientation = "h"
 clawUp = 1
 
@@ -76,8 +77,8 @@ def bajada():
 
 @event.start
 def init():
-    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=1)
-    ultrasonic2.led_show([80,80,80,80,80,80,80,80], index=2)
+    ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=1)
+    ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=2)
     quad_rgb_sensor.set_led(color = "green", index = LineFollower)
     clasificador(90)
     compuerta(90)
@@ -135,15 +136,13 @@ def findLine(left, right, ch):
     stop()
 
 def intersection(direction):
-    # TODO check if it's tilted, if so, it means that it-s not an intersection, but a bump instead.
     stop()
-    if subida(): # TODO increase sensitivity
+    if subida():
         move(50,50)
-        sleep(0.8)
+        sleep(1.2)
         stop()
         return
-    sleep(0.3)
-    #TODO add a retreat until not black very slow move
+    sleep(0.2)
     move(-40,-40)
     sleep(0.2)
     stop()
@@ -157,11 +156,13 @@ def intersection(direction):
             stop()
             break
         move(-25,-25)
-        
+    move(-40,-40)
+    sleep(0.1)
+    stop()
     quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     sleep(0.5)
-    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) < 40
-    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) < 40
+    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) <= GreenMax
+    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) <= GreenMax
     sleep(0.3)
     quad_rgb_sensor.set_led(color = "green", index = LineFollower)
     if s1 and s4:
@@ -172,26 +173,26 @@ def intersection(direction):
     elif s1:
         led.on("green", id=5)
         move(80,80)
-        sleep(0.8)
-        move(-80,0)
-        sleep(0.5)
+        sleep(0.35)
+        move(-80,80)
+        sleep(0.3)
         findLine(-50,50, "r1")
     elif s4:
         led.on("green", id=1)
         move(80,80)
-        sleep(0.8)
-        move(0,-80)
-        sleep(0.5)
+        sleep(0.35)
+        move(80,-80)
+        sleep(0.3)
         findLine(50,-50, "l1")
     elif direction == "l":
         led.on("yellow", id=5)
         move(80,80)
-        sleep(0.4)
+        sleep(0.35)
         findLine(-50,50, "r1")
     elif direction == "r":
         led.on("yellow", id=1)
         move(80,80)
-        sleep(0.4)
+        sleep(0.35)
         findLine(50,-50, "l1")
     led.on(50,50,50)
 
@@ -220,15 +221,15 @@ def getStatus():
     return status
 
 def followLine():
-    KD = 15
-    KP = 30
-    SPEED = 80
+    KD = 1
+    KP = 80
+    SPEED = 100
     POS = 0
     PreviousPOS = 0
     PreviousError = 0
     while True:
-        [s1, s2, s3, s4, color] = quadRead(LineFollower)
-        if color == "white": # reflective tape
+        [s1, s2, s3, s4, color] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        if color == "white": # posible reflective tape
             break
         status = getStatus()
         if ultraDist(1) <= 8 and clawUp == 1:
@@ -251,12 +252,12 @@ def followLine():
         error = POS-4
         P = KP*error
         D = KD * (error-PreviousError)
-        if status == 3:move((SPEED + P + D)*0.35, (SPEED - P + D)*0.35)
-        else: move((SPEED + P + D)*0.65, (SPEED - P + D)*0.65)
+        if status == 3:move((SPEED + P + D)*0.25, (SPEED - P + D)*0.25)
+        else: move((SPEED + P + D)*0.4, (SPEED - P + D)*0.4)
         PreviousError=error
     
     # TODO change led to blue and read again to make sure its a reflective tape, if not. use recursion to continue
-    mbot2.EM_stop()
+    stop()
     led.on("cyan")
     quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     sleep(0.4)
@@ -283,7 +284,7 @@ def followLine():
         sleep(0.4)
         followLine()
     audio.play("beeps")
-    
+
 def grabBall():
     stop()
     closeClaw()
@@ -457,11 +458,10 @@ def tryToExit():
     audio.play("beeps")
     followLine()
     
-@event.is_press("a")
+@event.is_press("a") # square button
 def actionA():
     #depositBalls()
-    tryToExit()
-    """
+    #tryToExit()
     s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
     s2 = quad_rgb_sensor.get_light("L1", index=LineFollower)
     s3 = quad_rgb_sensor.get_light("R1", index=LineFollower)
@@ -475,7 +475,7 @@ def actionA():
     s14 = quad_rgb_sensor.get_light("R2", index=LineFollower)
     string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}".format(s1,s2,s3,s4,s11,s12,s13,s14)
     console.print(string)
-    """
+
 
 @event.is_press("middle")
 def actionCenter():
