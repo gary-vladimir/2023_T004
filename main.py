@@ -2,10 +2,10 @@ from cyberpi import *
 from time import sleep
 
 LineFollower = 2
-BlackMax = 25 # this should be less than the min green value
-ReflectiveMinGreen = 96 # mid white value for green fill light
-ReflectiveMinBlue = 90 # min reflective value
-GreenMax = 50
+BlackMax = 95
+ReflectiveMinGreen = 240
+ReflectiveMinBlue = 90
+GreenMax = 140
 orientation = "h"
 
 def move(left, right):
@@ -53,13 +53,12 @@ def ultraDist(i):
     return res
 
 def quadRead(i):
-    quad_rgb_sensor.set_led(color = "green", index = i)
-    s1 = quad_rgb_sensor.get_light("L2", index = i)
-    s2 = quad_rgb_sensor.get_light("L1", index = i)
-    s3 = quad_rgb_sensor.get_light("R1", index = i)
-    s4 = quad_rgb_sensor.get_light("R2", index = i)
+    s1 = quad_rgb_sensor.get_green("L2", index = i)
+    s2 = quad_rgb_sensor.get_green("L1", index = i)
+    s3 = quad_rgb_sensor.get_green("R1", index = i)
+    s4 = quad_rgb_sensor.get_green("R2", index = i)
     color = ""
-    if s2 > ReflectiveMinGreen and s3 > ReflectiveMinGreen: 
+    if s1 >= ReflectiveMinGreen and s2 >= ReflectiveMinGreen: 
         color = "white"
 
     s1 = 1 if s1 < BlackMax else 0
@@ -68,16 +67,10 @@ def quadRead(i):
     s4 = 1 if s4 < BlackMax else 0
     return [s1, s2, s3, s4, color]
 
-def subida():
-    return get_pitch() <= -15
-
-def bajada():
-    return get_pitch() >= 15
-
 def alineacion(left, right):
     while True:
-        s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) <= BlackMax
-        s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) <= BlackMax
+        s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) <= BlackMax
+        s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) <= BlackMax
         if s1 and s4:
             break
         m1 = left
@@ -91,7 +84,6 @@ def alineacion(left, right):
 def init():
     ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=1)
     ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=2)
-    quad_rgb_sensor.set_led(color = "green", index = LineFollower)
     clasificador(90)
     compuerta(90)
     led.on(255,255,255)
@@ -109,14 +101,14 @@ def botella():
     stop()
     end = True
     while end:
-        s3 = quad_rgb_sensor.get_light("L2", index = LineFollower)
+        s3 = quad_rgb_sensor.get_green("L2", index = LineFollower)
         if(s3 < BlackMax): break
-        move(35,35)
+        move(42,42)
         second = 0
         while second < 0.8:
             sleep(0.1)
             second += 0.1
-            s3 = quad_rgb_sensor.get_light("L2", index = LineFollower)
+            s3 = quad_rgb_sensor.get_green("L2", index = LineFollower)
             if(s3 < BlackMax):
                 end = False
                 break
@@ -126,7 +118,7 @@ def botella():
         while second < 1.2:
             sleep(0.1)
             second += 0.1
-            s3 = quad_rgb_sensor.get_light("L2", index = LineFollower)
+            s3 = quad_rgb_sensor.get_green("L2", index = LineFollower)
             if(s3 < BlackMax):
                 end = False
                 break
@@ -135,7 +127,7 @@ def botella():
     move(0,-75)
     sleep(0.6)
     stop()
-    while quad_rgb_sensor.get_light("R2", index = LineFollower) > BlackMax:
+    while quad_rgb_sensor.get_green("R2", index = LineFollower) > BlackMax:
         move(0,40)
     move(50,75)
     sleep(0.3)
@@ -150,20 +142,9 @@ def botella():
     sleep(1.3)
     stop()
     findLine(50,-50, "l1")
-    """
-    move(60,60)
-    sleep(0.2)
-    stop()
-    while True:
-        s3 = quad_rgb_sensor.get_light("R1", index = LineFollower)
-        if(s3 < BlackMax): break
-        move(60,-60)
-    stop()
-    led.on(50,50,50)
-    """
 
 def findLine(left, right, ch):
-    while quad_rgb_sensor.get_light(ch, index = LineFollower) > BlackMax:
+    while quad_rgb_sensor.get_green(ch, index = LineFollower) > BlackMax:
         move(left, right)
     stop()
 
@@ -179,8 +160,8 @@ def intersection(direction):
     sleep(0.2)
     stop()
     while True:
-        s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) > BlackMax
-        s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) > BlackMax
+        s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) > BlackMax
+        s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) > BlackMax
         if direction == "l" and s1:
             stop()
             break
@@ -191,12 +172,9 @@ def intersection(direction):
     move(-40,-40)
     sleep(0.1)
     stop()
-    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
-    sleep(0.5)
-    s4 = quad_rgb_sensor.get_light("R2", index = LineFollower) <= GreenMax
-    s1 = quad_rgb_sensor.get_light("L2", index = LineFollower) <= GreenMax
+    s4 = quad_rgb_sensor.get_blue("R2", index = LineFollower) <= GreenMax
+    s1 = quad_rgb_sensor.get_blue("L2", index = LineFollower) <= GreenMax
     sleep(0.3)
-    quad_rgb_sensor.set_led(color = "green", index = LineFollower)
     if s1 and s4:
         led.on("green",0)
         move(80,-80)
@@ -249,12 +227,14 @@ def handleRamps(status, claw):
     return newClaw
 
 def getStatus():
-    if subida():
+    angle = get_pitch()
+    if angle <= -15:
         status = 2
-    elif bajada():
+    elif angle >= 15:
         status = 3
-    else:
+    elif angle >= -3 and angle <= 3:
         status = 1
+    else: status = 4
     return status
 
 def followLine():
@@ -264,7 +244,7 @@ def followLine():
         status = getStatus()
         if color == "white" and status == 1: # reflective tape
             break
-        if ultraDist(1) <= 8 and clawStatus == 1 and status == 1:
+        if ultraDist(1) <= 8 and ultraDist(2) <= 11 and clawStatus == 1 and status == 1:
             botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
@@ -387,7 +367,6 @@ def checkCorner():
 distancesVertical = [3,4,3,2,3,4,3]
 
 def collectBalls():
-    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
     lowerClaw()
     openClaw()
     if orientation == "h":
@@ -464,17 +443,15 @@ def tryToExit():
 def actionA():
     #depositBalls()
     #tryToExit()
-    s1 = quad_rgb_sensor.get_light("L2", index=LineFollower)
-    s2 = quad_rgb_sensor.get_light("L1", index=LineFollower)
-    s3 = quad_rgb_sensor.get_light("R1", index=LineFollower)
-    s4 = quad_rgb_sensor.get_light("R2", index=LineFollower)
+    s1 = quad_rgb_sensor.get_green("L2", index=LineFollower)
+    s2 = quad_rgb_sensor.get_green("L1", index=LineFollower)
+    s3 = quad_rgb_sensor.get_green("R1", index=LineFollower)
+    s4 = quad_rgb_sensor.get_green("R2", index=LineFollower)
     sleep(0.4)
-    quad_rgb_sensor.set_led(color = "blue", index = LineFollower)
-    sleep(0.4)
-    s11 = quad_rgb_sensor.get_light("L2", index=LineFollower)
-    s12 = quad_rgb_sensor.get_light("L1", index=LineFollower)
-    s13 = quad_rgb_sensor.get_light("R1", index=LineFollower)
-    s14 = quad_rgb_sensor.get_light("R2", index=LineFollower)
+    s11 = quad_rgb_sensor.get_blue("L2", index=LineFollower)
+    s12 = quad_rgb_sensor.get_blue("L1", index=LineFollower)
+    s13 = quad_rgb_sensor.get_blue("R1", index=LineFollower)
+    s14 = quad_rgb_sensor.get_blue("R2", index=LineFollower)
     string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}\n pitch:{8}".format(s1,s2,s3,s4,s11,s12,s13,s14, get_pitch())
     console.print(string)
 
