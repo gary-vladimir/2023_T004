@@ -216,7 +216,7 @@ def handleRamps(status, claw):
     elif status == 3 and claw == 1:
         newClaw = 3
         stop()
-        lowerClaw()
+        lowerClaw(1)
     elif status == 1 and claw == 2:
         newClaw = 1
         stop()
@@ -313,10 +313,6 @@ def turn(angle):
         if(angle >= 0 and z >= angle):break
         if(angle < 0 and z <= angle):break
     stop()
-    if angle > 0: move(-50,50)
-    else: move(50,-50)
-    sleep(0.1)
-    stop()
 
 def findEdge():
     reset_yaw()
@@ -383,7 +379,7 @@ def checkCorner():
         stop()
     moveSearchUltras(3.7)
 
-distancesVertical = [3,4,3,2,3,4,3]
+distancesVertical = [3,4.2,3.2,2.6,3.2,4,3]
 
 def collectBalls():
     lowerClaw()
@@ -394,8 +390,7 @@ def collectBalls():
         moveSearchUltras(5.9)
     closeClaw()
     elevateClaw()
-    turn(90)
-    sleep(5)
+    turn(88)
     found = findEdge()
     move(-60,-65)
     if orientation == "h":
@@ -406,18 +401,19 @@ def collectBalls():
     if not found:
         lowerClaw()
         openClaw()
-    sleep(5)
+    sleep(1)
     # at this point the robot is in the center and pointing to the long side
     if orientation == "h":
         turn(45)
     else:
         turn(-45)
-        
+
     for dist in distancesVertical:
         time = moveSearchUltras(dist, considerObstacle=True)
         move(-60,-65)
         if time == -1: sleep(dist)
         else: sleep(time)
+        sleep(0.4)
         stop()
         turn(-46)
 
@@ -494,7 +490,7 @@ def actionCenter():
 
 @event.is_press("b") # triangle button
 def actionB():
-    #followLine()
+    followLine()
     collectBalls()
     sleep(5)
     depositBalls()
