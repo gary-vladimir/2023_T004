@@ -4,7 +4,6 @@ from time import sleep
 LineFollower = 2
 BlackMax = 95
 ReflectiveMinGreen = 240
-ReflectiveMinBlue = 90
 GreenMax = 140
 orientation = "h"
 
@@ -49,7 +48,9 @@ def lowerClaw(time = 1.3):
 
 def ultraDist(i):
     res = ultrasonic2.get(index=i)
-    if(res <= 4): return 200
+    treshold = 4
+    if i == 1: treshold = 6
+    if(res <= treshold): return 200
     return res
 
 def quadRead(i):
@@ -273,9 +274,9 @@ def grabBall():
     stop()
     closeClaw()
     elevateClaw()
-    lowerClaw(0.3)
+    lowerClaw(0.2)
     openClaw()
-    lowerClaw(0.3)
+    lowerClaw(0.35)
     closeClaw()
     lowerClaw(0.7)
     openClaw()
@@ -284,14 +285,19 @@ def grabBall():
     clasificador(90)
 
 def moveSearchUltras(time, left=60, right=60, considerObstacle=False):
+    reset_yaw()
     move(left, right)
     second = 0
     while second < time:
         if considerObstacle and ultraDist(1) <= 15 and ultraDist(2) <= 18:
+            stop()
             return second
         if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
             grabBall()
             move(left, right)
+        if get_yaw()*-1 > 0: move(left, right+10)
+        elif get_yaw()*-1 < 0: move(left+5, right)
+        else: move(left, right)
         second += 0.1
         sleep(0.1)
     stop()
@@ -313,19 +319,32 @@ def turn(angle):
     stop()
 
 def findEdge():
+    reset_yaw()
+    if ultraDist(1) <= 15 and ultraDist(2) <= 17: 
+        move(-60,-65)
+        sleep(0.7)
+        stop()
+        return False
+    lowerClaw()
+    openClaw()
     move(60, 60)
     while True:
         if ultraDist(1) <= 15 and ultraDist(2) <= 17:
             break
-        if quad_rgb_sensor.get_light("L1", index=LineFollower) < BlackMax:
+        if quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax:
             stop()
-            move(-60,-60)
-            sleep(2)
+            move(-60,-65)
+            sleep(1.5)
             break
         if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
             grabBall()
             move(60,60)
+        angle = get_yaw()*-1
+        if angle > 0: move(60,68)
+        elif angle < 0: move(64,60)
+        else: move(60,60)
     stop()
+    return True
     
 def greenTriangle():
     return dual_rgb_sensor.get_green(ch = 1, index = 1) > 25 and dual_rgb_sensor.get_red(ch = 1, index = 1) < 20
@@ -337,7 +356,7 @@ def checkCorner():
     moveSearchUltras(2)
     turn(-90)
     turn(-90)
-    move(-60,-60)
+    move(-60,-65)
     sleep(1.3)
     stop()
     green = greenTriangle()
@@ -349,7 +368,7 @@ def checkCorner():
         move(-60,-60)
         sleep(0.8)
         stop()
-        move(55,55)
+        move(75,75)
         sleep(0.35)
         stop()
         if green: compuerta(0)
@@ -372,15 +391,21 @@ def collectBalls():
     if orientation == "h":
         moveSearchUltras(4.5)
     else:
-        moveSearchUltras(6)
-    turn(95)
-    findEdge()
-    move(-60,-60)
+        moveSearchUltras(5.9)
+    closeClaw()
+    elevateClaw()
+    turn(90)
+    sleep(5)
+    found = findEdge()
+    move(-60,-65)
     if orientation == "h":
-        sleep(4)
+        sleep(4.1)
     else:
         sleep(2.5)
     stop()
+    if not found:
+        lowerClaw()
+        openClaw()
     sleep(5)
     # at this point the robot is in the center and pointing to the long side
     if orientation == "h":
@@ -390,11 +415,11 @@ def collectBalls():
         
     for dist in distancesVertical:
         time = moveSearchUltras(dist, considerObstacle=True)
-        move(-60,-60)
+        move(-60,-65)
         if time == -1: sleep(dist)
         else: sleep(time)
         stop()
-        turn(-45)
+        turn(-46)
 
 def depositBalls():
     turn(-90)
@@ -418,12 +443,13 @@ def moveSearchExit():
     move(60, 60)
     second = 0
     while True:
-        if quad_rgb_sensor.get_light("L2", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("L1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("R1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_light("R2", index=LineFollower) < BlackMax:
+        if quad_rgb_sensor.get_green("L2", index=LineFollower) < BlackMax or quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_green("R1", index=LineFollower) < BlackMax or quad_rgb_sensor.get_green("R2", index=LineFollower) < BlackMax:
             stop()
             return True
-        if (ultraDist(1) <= 15 and ultraDist(2) <= 17) or quad_rgb_sensor.get_light("L1", index=LineFollower) > ReflectiveMinBlue:
+        angle = get_pitch()
+        if (ultraDist(1) <= 15 and ultraDist(2) <= 17) or (quad_rgb_sensor.get_green("L1", index=LineFollower) >= ReflectiveMinGreen and angle >= -3 and angle <= 3):
             stop()
-            move(-60,-60)
+            move(-60,-65)
             sleep(second)
             stop()
             return False
@@ -468,7 +494,7 @@ def actionCenter():
 
 @event.is_press("b") # triangle button
 def actionB():
-    followLine()
+    #followLine()
     collectBalls()
     sleep(5)
     depositBalls()
