@@ -59,15 +59,11 @@ def quadRead(i):
     s2 = quad_rgb_sensor.get_green("L1", index = i)
     s3 = quad_rgb_sensor.get_green("R1", index = i)
     s4 = quad_rgb_sensor.get_green("R2", index = i)
-    color = ""
-    if s1 >= ReflectiveMinGreen and s2 >= ReflectiveMinGreen: 
-        color = "white"
-
     s1 = 1 if s1 < BlackMax else 0
     s2 = 1 if s2 < BlackMax else 0
     s3 = 1 if s3 < BlackMax else 0
     s4 = 1 if s4 < BlackMax else 0
-    return [s1, s2, s3, s4, color]
+    return [s1, s2, s3, s4]
 
 def alineacion(left, right):
     while not controller.is_press("b"):
@@ -165,7 +161,7 @@ def intersection(direction):
     if quad_rgb_sensor.get_red("L1", index=LineFollower) > minRed and quad_rgb_sensor.get_red("R1", index=LineFollower) > minRed and quad_rgb_sensor.get_green("R1", index=LineFollower) < BlackMax and quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax:
         stop()
         led.on("red")
-        audio.play("level_up")
+        audio.play("level-up")
         sleep(20)
         
     while not controller.is_press("b"):
@@ -247,17 +243,20 @@ def getStatus():
     return status
 
 def followLine():
+    timer = 0
     clawStatus = 1
     while not controller.is_press("b"):
-        [s1, s2, s3, s4, color] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        [s1, s2, s3, s4] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
-        if color == "white" and status == 1: # reflective tape
+        if timer > 22 and status == 1: # reflective tape
             break
         if ultraDist(1) <= 8 and ultraDist(2) <= 11 and clawStatus == 1 and status == 1:
             botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
+            timer += 1
             continue
+        else: timer = 0
         clawStatus = handleRamps(status, clawStatus)
         if(s1 and s2):
             intersection("l")
