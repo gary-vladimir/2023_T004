@@ -50,7 +50,7 @@ def lowerClaw(time = 1.3):
 def ultraDist(i):
     res = ultrasonic2.get(index=i)
     treshold = 4
-    if i == 1: treshold = 6
+    if i == 2: treshold = 6
     if(res <= treshold): return 200
     return res
 
@@ -82,11 +82,13 @@ def alineacion(left, right):
 def init():
     ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=1)
     ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=2)
+    ultrasonic2.led_show([50,50,50,50,50,50,50,50], index=3)
     clasificador(90)
     compuerta(90)
     led.on(255,255,255)
     console.print("start up successful")
     led.on(50,50,50)
+    audio.play("beeps")
 
 def botella():
     stop()
@@ -250,7 +252,7 @@ def followLine():
         status = getStatus()
         if timer > 22 and status == 1: # reflective tape
             break
-        if ultraDist(1) <= 8 and ultraDist(2) <= 11 and clawStatus == 1 and status == 1:
+        if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
         if(not s1 and not s2 and not s3 and not s4):
             move(50,50)
@@ -276,7 +278,44 @@ def followLine():
     stop()
     led.on("cyan")
     audio.play("beeps")
+    tryToExit2()
 
+def tryToExit2():
+    move(-60,-60)
+    sleep(2)
+    stop()
+    while True:
+        angle = get_pitch()
+        [s1, s2, s3, s4] = quadRead(LineFollower)
+        if (s1 or s2 or s3 or s4) and  angle >= -4 and angle <= 4: break
+        if ultraDist(2) < 15 or ultraDist(3) < 15:
+            turn(-89)
+            stop()
+        if ultrasonic2.get(index=1) > 15:
+            stop()
+            move(50,50)
+            sleep(1.3)
+            turn(89)
+            move(50,50) # TODO check for black line here
+            sleep(1.2)
+            stop()
+        if ultrasonic2.get(index=1) < 8:
+            move(50,60)
+        else:move(50,50)
+                 
+    stop()
+    audio.play("beeps")
+    led.on("green")
+    move(60,60)
+    sleep(0.8)
+    stop()
+    alineacion(-30,-30)
+    move(60,60)
+    sleep(0.3)
+    stop()
+    findLine(50,80, "l1")
+    followLine()
+    
 def grabBall():
     stop()
     closeClaw()
@@ -296,10 +335,10 @@ def moveSearchUltras(time, left=60, right=60, considerObstacle=False):
     move(left, right)
     second = 0
     while second < time:
-        if considerObstacle and ultraDist(1) <= 15 and ultraDist(2) <= 18:
+        if considerObstacle and ultraDist(2) <= 15 and ultraDist(3) <= 18:
             stop()
             return second
-        if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
+        if ultraDist(3) <= 8 and not ultraDist(2) <= 10:
             grabBall()
             move(left, right)
         if get_yaw()*-1 > 0: move(left, right+10)
@@ -323,7 +362,7 @@ def turn(angle):
 
 def findEdge():
     reset_yaw()
-    if ultraDist(1) <= 15 and ultraDist(2) <= 17: 
+    if ultraDist(2) <= 15 and ultraDist(3) <= 17: 
         move(-60,-65)
         sleep(0.7)
         stop()
@@ -332,14 +371,14 @@ def findEdge():
     openClaw()
     move(60, 60)
     while True:
-        if ultraDist(1) <= 15 and ultraDist(2) <= 17:
+        if ultraDist(2) <= 15 and ultraDist(3) <= 17:
             break
         if quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax:
             stop()
             move(-60,-65)
             sleep(1.5)
             break
-        if ultraDist(2) <= 8 and not ultraDist(1) <= 10:
+        if ultraDist(3) <= 8 and not ultraDist(2) <= 10:
             grabBall()
             move(60,60)
         angle = get_yaw()*-1
@@ -450,7 +489,7 @@ def moveSearchExit():
             stop()
             return True
         angle = get_pitch()
-        if (ultraDist(1) <= 15 and ultraDist(2) <= 17) or (quad_rgb_sensor.get_green("L1", index=LineFollower) >= ReflectiveMinGreen and angle >= -3 and angle <= 3):
+        if (ultraDist(2) <= 15 and ultraDist(3) <= 17) or (quad_rgb_sensor.get_green("L1", index=LineFollower) >= ReflectiveMinGreen and angle >= -3 and angle <= 3):
             stop()
             move(-60,-65)
             sleep(second)
