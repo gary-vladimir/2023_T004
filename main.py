@@ -5,6 +5,7 @@ LineFollower = 2
 BlackMax = 95
 ReflectiveMinGreen = 240
 GreenMax = 140
+minRed = 100
 orientation = "h"
 
 def move(left, right):
@@ -69,7 +70,7 @@ def quadRead(i):
     return [s1, s2, s3, s4, color]
 
 def alineacion(left, right):
-    while True:
+    while not controller.is_press("b"):
         s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) <= BlackMax
         s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) <= BlackMax
         if s1 and s4:
@@ -145,7 +146,8 @@ def botella():
     findLine(50,-50, "l1")
 
 def findLine(left, right, ch):
-    while quad_rgb_sensor.get_green(ch, index = LineFollower) > BlackMax:
+    while not controller.is_press("b"):
+        if quad_rgb_sensor.get_green(ch, index = LineFollower) <= BlackMax: break
         move(left, right)
     stop()
 
@@ -160,7 +162,13 @@ def intersection(direction):
     move(-40,-40)
     sleep(0.2)
     stop()
-    while True:
+    if quad_rgb_sensor.get_red("L1", index=LineFollower) > minRed and quad_rgb_sensor.get_red("R1", index=LineFollower) > minRed and quad_rgb_sensor.get_green("R1", index=LineFollower) < BlackMax and quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax:
+        stop()
+        led.on("red")
+        audio.play("level_up")
+        sleep(20)
+        
+    while not controller.is_press("b"):
         s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) > BlackMax
         s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) > BlackMax
         if direction == "l" and s1:
@@ -240,7 +248,7 @@ def getStatus():
 
 def followLine():
     clawStatus = 1
-    while True:
+    while not controller.is_press("b"):
         [s1, s2, s3, s4, color] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
         if color == "white" and status == 1: # reflective tape
@@ -460,11 +468,10 @@ def tryToExit():
         turn(90)
     audio.play("beeps")
     followLine()
-    
+
 @event.is_press("a") # square button
 def actionA():
-    #depositBalls()
-    #tryToExit()
+    stop()
     s1 = quad_rgb_sensor.get_green("L2", index=LineFollower)
     s2 = quad_rgb_sensor.get_green("L1", index=LineFollower)
     s3 = quad_rgb_sensor.get_green("R1", index=LineFollower)
@@ -474,28 +481,18 @@ def actionA():
     s12 = quad_rgb_sensor.get_blue("L1", index=LineFollower)
     s13 = quad_rgb_sensor.get_blue("R1", index=LineFollower)
     s14 = quad_rgb_sensor.get_blue("R2", index=LineFollower)
-    string = "\ng: {0},{1},{2},{3}\nb: {4},{5},{6},{7}\n pitch:{8}".format(s1,s2,s3,s4,s11,s12,s13,s14, get_pitch())
+    sleep(0.4)
+    s21 = quad_rgb_sensor.get_red("L2", index=LineFollower)
+    s22 = quad_rgb_sensor.get_red("L1", index=LineFollower)
+    s23 = quad_rgb_sensor.get_red("R1", index=LineFollower)
+    s24 = quad_rgb_sensor.get_red("R2", index=LineFollower)
+    string = "\ng:{0},{1},{2},{3}\nb:{4},{5},{6},{7}\nr:{8},{9},{10},{11}\n".format(s1,s2,s3,s4,s11,s12,s13,s14,s21,s22,s23,s24)
     console.print(string)
-
-
-@event.is_press("middle")
-def actionCenter():
-    global orientation
-    orientation = "v"
-    audio.play("beeps")
-    g = dual_rgb_sensor.get_green(ch = 1, index = 1)
-    r = dual_rgb_sensor.get_red(ch = 1, index = 1)
-    debugColorSensor = "\ng:{}\nr:{}".format(g, r)
-    console.print(debugColorSensor)
 
 @event.is_press("b") # triangle button
 def actionB():
+    sleep(0.5)
     followLine()
-    collectBalls()
-    sleep(5)
-    depositBalls()
-    sleep(2)
-    tryToExit()
 
 @event.is_press("right")
 def right():
