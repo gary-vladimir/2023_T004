@@ -251,6 +251,10 @@ def followLine():
         [s1, s2, s3, s4] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
         if timer > 22 and status == 1: # reflective tape
+            stop()
+            led.on("cyan")
+            audio.play("beeps")
+            tryToExit2()
             break
         if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
@@ -274,11 +278,7 @@ def followLine():
             move(-75, 30)
         elif s4:
             move(30,-75)
-
     stop()
-    led.on("cyan")
-    audio.play("beeps")
-    tryToExit2()
 
 def tryToExit2():
     move(-60,-60)
