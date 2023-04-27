@@ -280,6 +280,15 @@ def followLine():
             move(30,-75)
     stop()
 
+def moveWhileCheckBlackLine(time):
+    second = 0
+    while second <= time:
+        angle = get_pitch()
+        [s1, s2, s3, s4] = quadRead(LineFollower)
+        if (s1 or s2 or s3 or s4) and  angle >= -3 and angle <= 3: return True
+        second += 0.15
+    return False
+    
 def tryToExit2():
     move(-60,-60)
     sleep(2)
@@ -296,9 +305,9 @@ def tryToExit2():
             move(50,50)
             sleep(1.3)
             turn(89)
-            move(50,50) # TODO check for black line here
-            sleep(1.2)
+            found = moveWhileCheckBlackLine(1.2)
             stop()
+            if found: break
         if ultrasonic2.get(index=1) < 8:
             move(50,60)
         else:move(50,50)
