@@ -290,8 +290,12 @@ def moveWhileCheckBlackLine(time):
     second = 0
     while second <= time:
         angle = get_pitch()
-        line = quad_rgb_sensor.get_line_sta(index = LineFollower)
-        if line != 15 and  angle >= -3 and angle <= 3: return True
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
+        if (s1 or s2 or s3 or s4) and  angle >= -3 and angle <= 3: return True
         second += 0.01
     return False
     
@@ -301,8 +305,12 @@ def tryToExit2():
     stop()
     while True:
         angle = get_pitch()
-        line = quad_rgb_sensor.get_line_sta(index = LineFollower)
-        if line != 15 and angle >= -4 and angle <= 4: break
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
+        if (s1 or s2 or s3 or s4) and angle >= -3 and angle <= 3: break
         
         if ultraDist(2) < 15 and ultraDist(3) < 15:
             stop()
