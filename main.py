@@ -3,7 +3,7 @@ from time import sleep
 
 LineFollower = 2
 BlackMax = 95
-ReflectiveMinGreen = 240
+ReflectiveMinGreen = 245
 GreenMax = 110
 minRed = 100
 orientation = "h"
@@ -231,7 +231,7 @@ def getStatus():
 
 def followLine():
     KD = 25
-    KP = 70
+    KP = 78
     SPEED = 45
     POS = 0
     PreviousPOS = 0
@@ -254,10 +254,17 @@ def followLine():
             break
         if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
-        if (not s1 and not s2 and not s3 and not s4) and (lastOnBlack == 2 or lastOnBlack == 3): 
-            move(50,50)
-            timer += 0.01
-            continue
+        if (not s1 and not s2 and not s3 and not s4) and (lastOnBlack == 2 or lastOnBlack == 3):
+            stop()
+            if quad_rgb_sensor.get_green("L1", index = LineFollower) > ReflectiveMinGreen:
+                audio.play("beeps")
+                move(60,60)
+                sleep(0.5)
+            else:
+                move(42,40)
+                sleep(0.15)
+                timer += 0.3
+                continue
         else: timer = 0
         clawStatus = handleRamps(status, clawStatus)
         if s1 and s2:
@@ -305,7 +312,7 @@ def moveWhileCheckBlackLine(time):
     
 def tryToExit2():
     move(-60,-60)
-    sleep(2.6)
+    sleep(2.9)
     stop()
     while True:
         angle = get_pitch()
@@ -335,7 +342,7 @@ def tryToExit2():
             move(50,-50)
             sleep(1.7)
             stop()
-            found = moveWhileCheckBlackLine(16)
+            found = moveWhileCheckBlackLine(21)
             stop()
             sleep(1)
             if found: break
