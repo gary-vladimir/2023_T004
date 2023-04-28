@@ -134,7 +134,7 @@ def botella():
 
 def findLine(left, right, ch):
     while not controller.is_press("b"):
-        if not quad_rgb_sensor.is_line(ch, index = LineFollower): break
+        if quad_rgb_sensor.is_line(ch, index = LineFollower): break
         move(left, right)
     stop()
 
@@ -190,12 +190,12 @@ def intersection(direction):
         led.on("yellow", id=5)
         move(80,80)
         sleep(0.35)
-        findLine(-50,50, "r1")
+        findLine(-50,50, "l1")
     elif direction == "r":
         led.on("yellow", id=1)
         move(80,80)
         sleep(0.35)
-        findLine(50,-50, "l1")
+        findLine(50,-50, "r1")
     led.on(50,50,50)
 
 def handleRamps(status, claw):
@@ -230,11 +230,21 @@ def getStatus():
     return status
 
 def followLine():
+    KD = 25
+    KP = 60
+    SPEED = 60
+    POS = 0
+    PreviousPOS = 0
+    PreviousError = 0
     timer = 0
     clawStatus = 1
     while not controller.is_press("b"):
-        line = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
         if timer > 10 and status == 1: # reflective tape
             stop()
             led.on("cyan")
@@ -243,26 +253,36 @@ def followLine():
             break
         if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
-        if line == 15:
+        if not s1 and not s2 and not s3 and not s4:
             move(50,50)
             timer += 0.01
             continue
         else: timer = 0
         clawStatus = handleRamps(status, clawStatus)
-        if line == 3 or line == 1 or line == 0:
+        if s1 and s2:
             intersection("l")
-        elif line == 12 or line == 8:
+        elif s3 and s4:
             intersection("r")
-        elif line == 9:
-            move(50, 50)
-        elif line == 11:
-            move(50,70)
-        elif line == 13:
-            move(70,50)
-        elif line == 7:
-            findLine(-100,60, "l1")
-        elif line == 14:
-            findLine(60,-100, "r1")
+        elif s1: findLine(-100,50,"l1")
+        elif s4: findLine(50,-100,"r1")
+        else:
+            suma = s1 + s2*3 + s3*5 + s4*7
+            pesos = s1 + s2 + s3 + s4
+            if(pesos > 0):
+                POS = suma/pesos
+                PreviousPOS = POS
+            else:
+                POS = PreviousPOS
+            error = POS-4
+            P = KP*error
+            D = KD * (error-PreviousError)
+            rightPower = SPEED - P + D
+            leftPower = SPEED + P + D
+            if abs(leftPower) > 70 or abs(rightPower) > 70: 
+                leftPower *= 0.5
+                rightPower *= 0.5
+            move(leftPower, rightPower)
+            PreviousError=error
     stop()
 
 def moveWhileCheckBlackLine(time):
