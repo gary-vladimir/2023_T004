@@ -4,7 +4,7 @@ from time import sleep
 LineFollower = 2
 BlackMax = 95
 ReflectiveMinGreen = 240
-GreenMax = 140
+GreenMax = 110
 minRed = 100
 orientation = "h"
 
@@ -231,13 +231,14 @@ def getStatus():
 
 def followLine():
     KD = 25
-    KP = 60
-    SPEED = 60
+    KP = 70
+    SPEED = 45
     POS = 0
     PreviousPOS = 0
     PreviousError = 0
     timer = 0
     clawStatus = 1
+    lastOnBlack = 2
     while not controller.is_press("b"):
         lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
@@ -253,7 +254,7 @@ def followLine():
             break
         if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
-        if not s1 and not s2 and not s3 and not s4:
+        if (not s1 and not s2 and not s3 and not s4) and (lastOnBlack == 2 or lastOnBlack == 3): 
             move(50,50)
             timer += 0.01
             continue
@@ -261,28 +262,31 @@ def followLine():
         clawStatus = handleRamps(status, clawStatus)
         if s1 and s2:
             intersection("l")
+            continue
         elif s3 and s4:
             intersection("r")
-        elif s1: findLine(-100,50,"l1")
-        elif s4: findLine(50,-100,"r1")
+            continue
+        suma = s1 + s2*3 + s3*5 + s4*7
+        pesos = s1 + s2 + s3 + s4
+        if(pesos > 0):
+            POS = suma/pesos
+            PreviousPOS = POS
         else:
-            suma = s1 + s2*3 + s3*5 + s4*7
-            pesos = s1 + s2 + s3 + s4
-            if(pesos > 0):
-                POS = suma/pesos
-                PreviousPOS = POS
-            else:
-                POS = PreviousPOS
-            error = POS-4
-            P = KP*error
-            D = KD * (error-PreviousError)
-            rightPower = SPEED - P + D
-            leftPower = SPEED + P + D
-            if abs(leftPower) > 70 or abs(rightPower) > 70: 
-                leftPower *= 0.5
-                rightPower *= 0.5
-            move(leftPower, rightPower)
-            PreviousError=error
+            POS = PreviousPOS
+        error = POS-4
+        P = KP*error
+        D = KD * (error-PreviousError)
+        rightPower = SPEED - P + D
+        leftPower = SPEED + P + D
+        if abs(leftPower) > 70 or abs(rightPower) > 70: 
+            leftPower *= 0.5
+            rightPower *= 0.5
+        move(leftPower, rightPower)
+        PreviousError=error
+        if s2: lastOnBlack = 2
+        if s3: lastOnBlack = 3
+        if s4: lastOnBlack = 4
+        if s1: lastOnBlack = 1
     stop()
 
 def moveWhileCheckBlackLine(time):
@@ -310,18 +314,26 @@ def tryToExit2():
         s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
         s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
         s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
-        if (s1 or s2 or s3 or s4) and angle >= -3 and angle <= 3: break
+        if (s1 or s2 or s3 or s4) and angle >= -3 and angle <= 3:
+            stop()
+            if quad_rgb_sensor.get_green("R2", index=LineFollower) > 55 or quad_rgb_sensor.get_red("R2", index=LineFollower) > 100:
+                turn(-91)
+                move(60,60)
+                sleep(1.5)
+                stop()
+                continue
+            else: break
         
         if ultraDist(2) < 15 and ultraDist(3) < 15:
             stop()
-            audio.plays("beeps")
-            turn(-89)
+            audio.play("beeps")
+            turn(-91)
         if ultrasonic2.get(index=1) > 30 and ultrasonic2.get(index=1) > 30:
             stop()
             move(50,50)
             sleep(1.5)
             move(50,-50)
-            sleep(1.6)
+            sleep(1.7)
             stop()
             found = moveWhileCheckBlackLine(16)
             stop()
