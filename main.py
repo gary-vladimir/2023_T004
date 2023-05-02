@@ -3,8 +3,8 @@ from time import sleep
 
 LineFollower = 2
 BlackMax = 95
-ReflectiveMinGreen = 240
-GreenMax = 140
+ReflectiveMinGreen = 245
+GreenMax = 110
 minRed = 100
 orientation = "h"
 
@@ -53,17 +53,6 @@ def ultraDist(i):
     if i == 2: treshold = 6
     if(res <= treshold): return 200
     return res
-
-def quadRead(i):
-    s1 = quad_rgb_sensor.get_green("L2", index = i)
-    s2 = quad_rgb_sensor.get_green("L1", index = i)
-    s3 = quad_rgb_sensor.get_green("R1", index = i)
-    s4 = quad_rgb_sensor.get_green("R2", index = i)
-    s1 = 1 if s1 < BlackMax else 0
-    s2 = 1 if s2 < BlackMax else 0
-    s3 = 1 if s3 < BlackMax else 0
-    s4 = 1 if s4 < BlackMax else 0
-    return [s1, s2, s3, s4]
 
 def alineacion(left, right):
     while not controller.is_press("b"):
@@ -145,7 +134,7 @@ def botella():
 
 def findLine(left, right, ch):
     while not controller.is_press("b"):
-        if quad_rgb_sensor.get_green(ch, index = LineFollower) <= BlackMax: break
+        if quad_rgb_sensor.is_line(ch, index = LineFollower): break
         move(left, right)
     stop()
 
@@ -157,18 +146,14 @@ def intersection(direction):
         stop()
         return
     sleep(0.2)
-    move(-40,-40)
-    sleep(0.2)
-    stop()
     if quad_rgb_sensor.get_red("L1", index=LineFollower) > minRed and quad_rgb_sensor.get_red("R1", index=LineFollower) > minRed and quad_rgb_sensor.get_green("R1", index=LineFollower) < BlackMax and quad_rgb_sensor.get_green("L1", index=LineFollower) < BlackMax:
         stop()
         led.on("red")
         audio.play("level-up")
         sleep(20)
-        
     while not controller.is_press("b"):
-        s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) > BlackMax
-        s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) > BlackMax
+        s4 = quad_rgb_sensor.get_green("R2", index = LineFollower) > (BlackMax-40)
+        s1 = quad_rgb_sensor.get_green("L2", index = LineFollower) > (BlackMax-40)
         if direction == "l" and s1:
             stop()
             break
@@ -205,12 +190,12 @@ def intersection(direction):
         led.on("yellow", id=5)
         move(80,80)
         sleep(0.35)
-        findLine(-50,50, "r1")
+        findLine(-50,50, "l1")
     elif direction == "r":
         led.on("yellow", id=1)
         move(80,80)
         sleep(0.35)
-        findLine(50,-50, "l1")
+        findLine(50,-50, "r1")
     led.on(50,50,50)
 
 def handleRamps(status, claw):
@@ -245,12 +230,23 @@ def getStatus():
     return status
 
 def followLine():
+    KD = 25
+    KP = 78
+    SPEED = 45
+    POS = 0
+    PreviousPOS = 0
+    PreviousError = 0
     timer = 0
     clawStatus = 1
+    lastOnBlack = 2
     while not controller.is_press("b"):
-        [s1, s2, s3, s4] = quadRead(LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
         status = getStatus()
-        if timer > 22 and status == 1: # reflective tape
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
+        if timer > 10 and status == 1: # reflective tape
             stop()
             led.on("cyan")
             audio.play("beeps")
@@ -258,62 +254,108 @@ def followLine():
             break
         if ultraDist(2) <= 8 and ultraDist(3) <= 11 and clawStatus == 1 and status == 1:
             botella()
-        if(not s1 and not s2 and not s3 and not s4):
-            move(50,50)
-            timer += 1
-            continue
+        if (not s1 and not s2 and not s3 and not s4) and (lastOnBlack == 2 or lastOnBlack == 3):
+            stop()
+            if quad_rgb_sensor.get_green("L1", index = LineFollower) > ReflectiveMinGreen:
+                audio.play("beeps")
+                move(60,60)
+                sleep(0.5)
+            else:
+                move(42,40)
+                sleep(0.15)
+                timer += 0.3
+                continue
         else: timer = 0
         clawStatus = handleRamps(status, clawStatus)
-        if(s1 and s2):
+        if s1 and s2:
             intersection("l")
-        elif(s3 and s4):
+            continue
+        elif s3 and s4:
             intersection("r")
-        elif s2 and s3:
-            move(50, 50)
-        elif s2:
-            move(0,40)
-        elif s3:
-            move(40,0)
-        elif s1:
-            move(-75, 30)
-        elif s4:
-            move(30,-75)
+            continue
+        suma = s1 + s2*3 + s3*5 + s4*7
+        pesos = s1 + s2 + s3 + s4
+        if(pesos > 0):
+            POS = suma/pesos
+            PreviousPOS = POS
+        else:
+            POS = PreviousPOS
+        error = POS-4
+        P = KP*error
+        D = KD * (error-PreviousError)
+        rightPower = SPEED - P + D
+        leftPower = SPEED + P + D
+        if abs(leftPower) > 70 or abs(rightPower) > 70: 
+            leftPower *= 0.5
+            rightPower *= 0.5
+        move(leftPower, rightPower)
+        PreviousError=error
+        if s2: lastOnBlack = 2
+        if s3: lastOnBlack = 3
+        if s4: lastOnBlack = 4
+        if s1: lastOnBlack = 1
     stop()
 
+def moveWhileCheckBlackLine(time):
+    move(60,60)
+    second = 0
+    while second <= time:
+        angle = get_pitch()
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
+        if (s1 or s2 or s3 or s4) and  angle >= -3 and angle <= 3: return True
+        second += 0.01
+    return False
+    
 def tryToExit2():
     move(-60,-60)
-    sleep(2)
+    sleep(2.9)
     stop()
     while True:
         angle = get_pitch()
-        [s1, s2, s3, s4] = quadRead(LineFollower)
-        if (s1 or s2 or s3 or s4) and  angle >= -4 and angle <= 4: break
-        if ultraDist(2) < 15 or ultraDist(3) < 15:
-            turn(-89)
+        lineStatus = quad_rgb_sensor.get_line_sta(index = LineFollower) # s1,s2,s3,s4 are binary. 1 is black, 0 is white
+        s1 = 0 if (lineStatus & (1 << 3)) == 0 else 1
+        s2 = 0 if (lineStatus & (1 << 2)) == 0 else 1
+        s3 = 0 if (lineStatus & (1 << 1)) == 0 else 1
+        s4 = 0 if (lineStatus & (1 << 0)) == 0 else 1
+        if (s1 or s2 or s3 or s4) and angle >= -3 and angle <= 3:
             stop()
-        if ultrasonic2.get(index=1) > 15:
+            if quad_rgb_sensor.get_green("R2", index=LineFollower) > 55 or quad_rgb_sensor.get_red("R2", index=LineFollower) > 100:
+                turn(-91)
+                move(60,60)
+                sleep(1.5)
+                stop()
+                continue
+            else: break
+        
+        if ultraDist(2) < 15 and ultraDist(3) < 15:
+            stop()
+            audio.play("beeps")
+            turn(-91)
+        if ultrasonic2.get(index=1) > 30 and ultrasonic2.get(index=1) > 30:
             stop()
             move(50,50)
-            sleep(1.3)
-            turn(89)
-            move(50,50) # TODO check for black line here
-            sleep(1.2)
+            sleep(1.5)
+            move(50,-50)
+            sleep(1.7)
             stop()
+            found = moveWhileCheckBlackLine(21)
+            stop()
+            sleep(1)
+            if found: break
         if ultrasonic2.get(index=1) < 8:
             move(50,60)
-        else:move(50,50)
+        else:move(55,50)
                  
     stop()
     audio.play("beeps")
     led.on("green")
     move(60,60)
-    sleep(0.8)
+    sleep(0.4)
     stop()
-    alineacion(-30,-30)
-    move(60,60)
-    sleep(0.3)
-    stop()
-    findLine(50,80, "l1")
     followLine()
     
 def grabBall():
@@ -509,7 +551,11 @@ def tryToExit():
 
 @event.is_press("a") # square button
 def actionA():
+    line = quad_rgb_sensor.get_line_sta(index = LineFollower)
+    help = "-> {0}\n".format(line)
+    #console.print(help)
     stop()
+    
     s1 = quad_rgb_sensor.get_green("L2", index=LineFollower)
     s2 = quad_rgb_sensor.get_green("L1", index=LineFollower)
     s3 = quad_rgb_sensor.get_green("R1", index=LineFollower)
@@ -526,6 +572,7 @@ def actionA():
     s24 = quad_rgb_sensor.get_red("R2", index=LineFollower)
     string = "\ng:{0},{1},{2},{3}\nb:{4},{5},{6},{7}\nr:{8},{9},{10},{11}\n".format(s1,s2,s3,s4,s11,s12,s13,s14,s21,s22,s23,s24)
     console.print(string)
+    
 
 @event.is_press("b") # triangle button
 def actionB():
