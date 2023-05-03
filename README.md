@@ -1,4 +1,4 @@
-#3rd place in robocup rescue line junior 2023
+# 3rd place in robocup rescue line junior 2023
 this was our first time participating in this competition and we managed to obtain the highest individual round score using a pure Makeblock line follower solution
 
 !["el inge"](robot.jpg)
