@@ -8,7 +8,7 @@ this was our first time participating in this competition and we managed to obta
 in the last week before the competition we realized that the evacuation zone part took too much time and it didn't give out any points. they were multiplicators instead. if we had known this earlier we should have adjusted our strategy to only focus on a save algorithm for following line
 
 ### 2. Consider all edge cases
-we didn't test many obstacles over line cases because we thought they were unlikely due to their difficulty. However, they were present on the track and they were passable with some adjustments to the code that involved the gyro sensor.
+we didn't test many obstacles over line cases because we thought they were unlikely due to their difficulty. However, they were present on the track and they were passable with some adjustments to the code that involved the gyro sensor. Also make sure to consider an imperfect track that is made with tape, has slopes in between tiles and has green directions that don't exactly match the rules messurements. note for future self: consider a solution in which a light shutdown won't affect the robot
 
 ### 3. get_status() > getlight().
 significant improvement in read speed for the line follower and because you can calibrate using the build button by putting the sensor over the green tape and then to the line there is no need to read the light intensity.
